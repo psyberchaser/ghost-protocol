@@ -64,21 +64,22 @@
 \vspace{1.5cm}
 {\Large Trustless, Chain-Agnostic Cross-Chain Payment System\par}
 \vspace{0.5cm}
-{\large With ZK Proof Verification\par}
+{\large With ZK Proof Verification \& Soft Finality\par}
 \vspace{1.5cm}
 \begin{tcolorbox}[colback=backcolour,colframe=ghostcyan,width=0.85\textwidth]
 \centering
 \textbf{Current:} Ethereum (Sepolia) $\leftrightarrow$ Solana (Devnet)\\[0.2cm]
-\textbf{Architecture:} Chain-Agnostic\\[0.2cm]
-\textbf{Proofs:} SNARK + STARK Hybrid\\[0.2cm]
-\textbf{Settlement:} 10-30 seconds
+\textbf{Architecture:} Chain-Agnostic, Validium Model\\[0.2cm]
+\textbf{Proofs:} SNARK + STARK Hybrid with Recursive Batching\\[0.2cm]
+\textbf{Settlement:} Soft Finality (30s UX, 2-5min crypto finality)\\[0.2cm]
+\textbf{Data Layer:} Off-chain (IPFS/Arweave) + State Root on-chain
 \end{tcolorbox}
 \vspace{1.5cm}
 \begin{infobox}[Vision]
-A universal payment protocol where users pay with any asset on any chain, recipients receive their desired asset instantly---without trusting centralized intermediaries.
+A universal payment protocol where users pay with any asset on any chain, recipients receive their desired asset instantly---without trusting centralized intermediaries. Proofs are generated \textbf{before} funds move, not after.
 \end{infobox}
 \vfill
-{\large Version 2.2 --- December 5, 2025\par}
+{\large Version 3.0 --- December 2025\par}
 \end{titlepage}
 
 \tableofcontents
@@ -90,12 +91,190 @@ Ghost Protocol is a \textbf{trustless, chain-agnostic cross-chain payment system
 
 \subsection{Key Features}
 \begin{itemize}[noitemsep]
-\item Instant cross-chain payments (10-30 seconds)
-\item ZK proof verification (SNARK + STARK)
+\item Instant cross-chain payments (10-30 seconds user experience)
+\item ZK proof verification (SNARK + STARK hybrid)
 \item Multiple liquidity sources (pools, DEXs, stablecoins)
-\item Real-time oracle pricing (Pyth)
+\item Real-time oracle pricing (Pyth Network)
 \item Non-custodial (you control your keys)
+\item Recursive proof batching for gas efficiency
+\item Soft finality with cryptographic guarantees
 \end{itemize}
+
+\section{Core Architecture Decisions}
+
+Ghost Protocol makes three fundamental architecture choices that distinguish it from traditional bridges:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Feature} & \textbf{Choice} & \textbf{Rationale} \\
+\midrule
+Data Storage & Off-Chain (Validium) & On-chain is too expensive \\
+Proof Strategy & Recursive Batching & 90-98\% gas reduction \\
+Trust Model & Soft Finality & Instant UX with crypto guarantee \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Data Storage: Validium Model}
+
+Storing full transaction history on Ethereum is prohibitively expensive. Ghost Protocol uses the \textbf{Validium} approach:
+
+\begin{archbox}
+\begin{verbatim}
+VALIDIUM ARCHITECTURE:
+
++------------------+     +------------------+     +------------------+
+|   ETHEREUM       |     |   DA LAYER       |     |   USERS          |
++------------------+     +------------------+     +------------------+
+| State Root Only  |<--->| Full History     |<--->| Can Reconstruct  |
+| (~32 bytes)      |     | IPFS / Arweave   |     | State Anytime    |
+| Cheap to verify  |     | EigenDA / Celestia     | Trustless        |
++------------------+     +------------------+     +------------------+
+
+COST COMPARISON:
+  Pure Rollup:     ~$50-100 per tx (calldata)
+  Validium:        ~$0.01-0.10 per tx
+  Savings:         99%+
+\end{verbatim}
+\end{archbox}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Approach} & \textbf{Gas Cost} & \textbf{Data Availability} & \textbf{Security} \\
+\midrule
+Pure Rollup & Very High & Ethereum (best) & Maximum \\
+\textbf{Validium} & \textbf{Very Low} & \textbf{DA Layer} & \textbf{High} \\
+Volition & Hybrid & User Choice & Flexible \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Why Validium Works:}
+\begin{itemize}[noitemsep]
+\item State root on Ethereum = cryptographic commitment (cannot be faked)
+\item IPFS/Arweave = permanent, verifiable history
+\item EigenDA, Celestia = purpose-built DA with economic guarantees
+\item Redundancy: Store on 2+ DA layers for safety
+\end{itemize}
+
+\subsection{Proof Strategy: Recursive Batching}
+
+Per-transaction proofs on Ethereum mainnet are economically unviable. Recursive batching solves this:
+
+\begin{archbox}
+\begin{verbatim}
+BATCHING ECONOMICS:
+
+Single Proof:   ~400,000 gas × $0.10 = $40 per tx 
+Batch of 50:    ~400,000 gas ÷ 50   = $0.80 per tx 
+
+GAS COST BY BATCH SIZE:
++------------+-------------+-----------------+----------+
+| Batch Size | Gas per Tx  | Cost @ 50 gwei  | Savings  |
++------------+-------------+-----------------+----------+
+|     1      |   400,000   |     $40.00      |    0%    |
+|    10      |    40,000   |      $4.00      |   90%    |
+|    50      |     8,000   |      $0.80      |   98%    |
+|   100      |     4,000   |      $0.40      |   99%    |
++------------+-------------+-----------------+----------+
+\end{verbatim}
+\end{archbox}
+
+\textbf{Implementation:}
+\begin{lstlisting}
+// Batch triggers - submit when EITHER condition met:
+const BATCH_CONFIG = {
+  maxTxCount: 50,        // Full batch
+  maxWaitTime: 30_000,   // 30 seconds (never wait forever)
+};
+\end{lstlisting}
+
+\begin{successbox}[Recursive Proof Aggregation]
+\begin{itemize}[noitemsep]
+\item 10-50 individual proofs combined into 1 aggregated proof
+\item Verification cost amortized across all transactions
+\item User still gets instant settlement (proof exists before funds move)
+\item Batch submission happens in background
+\end{itemize}
+\end{successbox}
+
+\subsection{Trust Model: Soft Finality}
+
+The key insight that enables ``instant ZK'':
+
+\begin{dangerbox}[Critical Distinction]
+\textbf{Optimistic:} Execute first, assume valid, allow challenges (7 days). \textbf{No proof exists.}
+
+\textbf{Soft Finality (Ghost):} Generate proof FIRST, release funds, batch proofs later. \textbf{Proof EXISTS before funds move.}
+\end{dangerbox}
+
+\begin{archbox}
+\begin{verbatim}
+SOFT FINALITY TIMELINE:
+
+TIME ──────────────────────────────────────────────────────────────>
+
+     |                    RISK WINDOW                    |
+     |<─────────────────────────────────────────────────>|
+     |                                                   |
+ [Deposit]    [Proof Gen]    [SOL Sent]           [Batch Posted]
+     |             |              |                      |
+   T+0s          T+1s           T+2s                   T+40s
+     |             |              |                      |
+     v             v              v                      v
+  +------+    +--------+    +---------+           +----------+
+  | ETH  |    | Proof  |    | User    |           |  HARD    |
+  |Locked|    | VALID  |    | Happy   |           | FINALITY |
+  +------+    +--------+    +---------+           +----------+
+
+KEY POINT: The proof EXISTS at T+1s.
+           It just hasn't been SUBMITTED yet.
+           This is NOT optimistic.
+\end{verbatim}
+\end{archbox}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Aspect} & \textbf{Optimistic Rollup} & \textbf{Ghost Soft Finality} \\
+\midrule
+Proof at instant moment? & No & \textcolor{ghostgreen}{Yes} \\
+Can be proven fraudulent later? & Yes (7 days) & No (already proven) \\
+What if challenger appears? & Tx reversed & N/A - already proven \\
+Trust assumption & ``Probably valid'' & ``Cryptographically valid'' \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{successbox}[Why This Is NOT Optimistic]
+The proof \textbf{exists}. That's the key difference.
+\begin{itemize}[noitemsep]
+\item Optimistic = No proof exists, trusting it's valid
+\item Soft Finality = Proof EXISTS, just not on-chain yet
+\item The only deferred action is \textit{posting} the proof, not \textit{generating} it
+\end{itemize}
+\end{successbox}
+
+\subsection{What You Can Honestly Claim}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Accurate} & \textbf{Misleading} \\
+\midrule
+``Instant settlement with ZK proof'' & ``On-chain finality in 2 seconds'' \\
+``Cryptographically verified before funds release'' & ``Fully trustless instant'' \\
+``Proof-first instant transfers'' & ``Zero latency ZK'' \\
+``ZK-secured instant payments'' & \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Centralized vs Decentralized}
 
@@ -947,6 +1126,470 @@ Circle & Centralized, freezing & Optional path, disclosed \\
 Users always see which path their transaction takes. Circle path clearly labeled as ``centralized but regulated.'' DEX path shows which protocols involved.
 \end{infobox}
 
+\section{Security Analysis: Risk Windows \& Mitigations}
+
+The soft finality model creates a \textbf{risk window} between instant delivery and on-chain settlement. This section analyzes all attack vectors and their mitigations.
+
+\subsection{Risk Window Timeline}
+
+\begin{archbox}
+\begin{verbatim}
+TIME ──────────────────────────────────────────────────────────────>
+
+     |                    RISK WINDOW                    |
+     |<─────────────────────────────────────────────────>|
+     |                                                   |
+ [Deposit]    [Proof Gen]    [SOL Sent]           [Batch Posted]
+     |             |              |                      |
+   T+0s          T+1s           T+2s                   T+40s
+
+WHAT'S PROVEN AT T+1s:
+  ✓ The transaction is valid
+  ✓ The amounts are correct
+  ✓ The cryptographic proof exists
+
+WHAT REQUIRES TRUST (until batch):
+  ⏳ That the relayer will submit the batch
+
+MITIGATION:
+  💰 Relayer has staked collateral
+  ⚡ Escape hatch lets users force-submit
+  📜 Proof is exportable
+\end{verbatim}
+\end{archbox}
+
+\subsection{Risk 1: Relayer Disappears After Sending SOL}
+
+\begin{archbox}
+\begin{verbatim}
+SCENARIO:
+├── User deposits ETH ✓
+├── Relayer generates proof ✓
+├── Relayer sends SOL to recipient ✓
+├── Relayer goes offline forever ✗
+└── Batch never submitted to Ethereum ✗
+
+RESULT:
+• Recipient: Has SOL ✓ (happy)
+• User: ETH in contract
+• Relayer: Lost SOL, never reclaimed ETH
+\end{verbatim}
+\end{archbox}
+
+\textbf{Risk Level:} Medium \\
+\textbf{Who Loses:} Relayer (they sent SOL but cannot prove it on-chain) \\
+\textbf{Mitigations:}
+\begin{itemize}[noitemsep]
+\item Proof is exportable --- user or anyone can submit it
+\item Escape hatch after timeout allows forced settlement
+\item Relayer collateral covers losses
+\item Multiple relayer redundancy
+\end{itemize}
+
+\subsection{Risk 2: Ethereum Reorg After Instant Release}
+
+\begin{dangerbox}[High Risk If Not Mitigated]
+If Ethereum reorganizes and the deposit transaction disappears, the relayer has sent SOL for a non-existent deposit.
+\end{dangerbox}
+
+\begin{archbox}
+\begin{verbatim}
+SCENARIO:
+├── User deposits ETH (block 1000)
+├── Relayer sees deposit, generates proof
+├── Relayer sends SOL instantly
+├── Ethereum reorgs, block 1000 replaced
+├── User's deposit TX no longer exists
+└── Proof references non-existent state
+
+RESULT:
+• Recipient: Has SOL ✓
+• User: Got refunded ETH (reorg) ✓
+• Relayer: Lost SOL, proof is orphaned ✗
+\end{verbatim}
+\end{archbox}
+
+\textbf{Risk Level:} High (if not mitigated) \\
+\textbf{Who Loses:} Relayer \\
+\textbf{Mitigation:}
+\begin{lstlisting}
+// Wait for Ethereum finality before releasing SOL
+const REQUIRED_CONFIRMATIONS = 12; // ~3 minutes
+
+// Or use finalized block (post-merge Ethereum)
+const block = await provider.getBlock('finalized');
+\end{lstlisting}
+
+\begin{successbox}[Safe Instant Model]
+Wait for 2-3 Ethereum confirmations (~30-45 seconds) before releasing SOL. This reduces reorg risk to near-zero while maintaining ``near-instant'' UX.
+\end{successbox}
+
+\subsection{Risk 3: Relayer Submits Fake Proof}
+
+\begin{archbox}
+\begin{verbatim}
+SCENARIO:
+├── User deposits ETH
+├── Relayer claims to generate proof (doesn't)
+├── Relayer sends SOL anyway
+├── Batch time comes...
+├── Relayer has no valid proof to submit
+└── On-chain verification fails
+
+RESULT:
+• Recipient: Has SOL ✓ (can't be clawed back)
+• User: ETH stuck or returned?
+• Relayer: Can't prove the transfer happened
+\end{verbatim}
+\end{archbox}
+
+\textbf{Risk Level:} Critical (if not mitigated) \\
+\textbf{Who Loses:} Relayer and system integrity \\
+\textbf{Mitigation:}
+\begin{lstlisting}
+// Users/watchers can verify proof BEFORE trusting
+async function verifyProofLocally(proof, publicInputs) {
+  const isValid = await snarkjs.groth16.verify(
+    vkey, publicInputs, proof
+  );
+  if (!isValid) throw new Error("INVALID - DO NOT TRUST");
+  return true;
+}
+\end{lstlisting}
+
+\subsection{Risk 4: Double Spend via Race Condition}
+
+This is the most critical attack vector. It occurs when multiple relayers process the same deposit.
+
+\begin{dangerbox}[Critical Risk]
+If multiple relayers see the same deposit and all send SOL, the recipient gets multiple payouts for a single deposit.
+\end{dangerbox}
+
+\begin{archbox}
+\begin{verbatim}
+THE ATTACK SCENARIO:
+
+                         TIME
+    ─────────────────────────────────────────────────────>
+    
+    Block 1000: User deposits 1 ETH to Ghost Pool
+                        |
+                        v
+         +--------------+--------------+
+         |                             |
+         v                             v
+    +---------+                   +---------+
+    |Relayer A|                   |Relayer B|
+    | Tokyo   |                   | NYC     |
+    +---------+                   +---------+
+         |                             |
+         | Sees deposit                | Sees deposit
+         | at T+100ms                  | at T+150ms
+         |                             |
+         v                             v
+    Generate proof                Generate proof
+         |                             |
+         v                             v
+    Send 40 SOL ───────────────> Send 40 SOL
+    to recipient                 to recipient
+         |                             |
+         v                             v
+    +─────────────────────────────────────+
+    |  RECIPIENT NOW HAS 80 SOL           |
+    |  BUT ONLY 1 ETH WAS DEPOSITED       |
+    +─────────────────────────────────────+
+\end{verbatim}
+\end{archbox}
+
+\subsubsection{Attack Variations}
+
+\textbf{Variation 1: Multiple Honest Relayers (Accident)}
+
+In a decentralized relayer network, all relayers see the same deposit event simultaneously. Each tries to help, resulting in multiple payouts.
+
+\textbf{Variation 2: Malicious User Exploits Latency}
+\begin{archbox}
+\begin{verbatim}
+USER (Attacker):
+├── Deposit 1 ETH
+├── Immediately send "process" request to 10 relayers
+├── Each relayer thinks they're first
+├── Collect 10x SOL
+└── Profit: 9 ETH worth of SOL
+\end{verbatim}
+\end{archbox}
+
+\textbf{Variation 3: MEV / Front-Running}
+\begin{archbox}
+\begin{verbatim}
+BLOCK N:
+├── User's deposit TX in mempool
+├── MEV bot sees it
+├── MEV bot spins up 5 "relayer" instances
+├── Each instance fires SOL the moment deposit confirms
+└── All 5 fire simultaneously
+\end{verbatim}
+\end{archbox}
+
+\subsubsection{Solutions}
+
+\textbf{Solution 1: Single Relayer (Centralized)}
+
+Only ONE authorized relayer processes deposits.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Pros} & \textbf{Cons} \\
+\midrule
+No double-spend possible & Single point of failure \\
+Simple implementation & Not decentralized \\
+ & Trust assumption \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Verdict:} Works for MVP but defeats decentralization goals.
+
+\textbf{Solution 2: On-Chain Lock Before Release}
+
+\begin{lstlisting}[language=Solidity]
+contract GhostPool {
+    mapping(bytes32 => address) public depositClaims;
+    
+    // Step 1: Relayer claims the deposit on-chain FIRST
+    function claimDeposit(bytes32 depositHash) external {
+        require(depositClaims[depositHash] == address(0), 
+                "Already claimed");
+        depositClaims[depositHash] = msg.sender;
+        emit DepositClaimed(depositHash, msg.sender);
+    }
+    
+    // Step 2: Only the claimer can process it
+    function executeDeposit(
+        bytes32 depositHash, 
+        bytes calldata proof
+    ) external {
+        require(depositClaims[depositHash] == msg.sender, 
+                "Not your claim");
+        // Process...
+    }
+}
+\end{lstlisting}
+
+\begin{archbox}
+\begin{verbatim}
+FLOW:
+1. Deposit happens
+2. Relayer sends TX: claimDeposit(hash) 
+3. Wait for claim TX to confirm (12 sec)
+4. Only winner can process
+5. Winner sends SOL
+6. Winner submits proof in batch
+
+TRADE-OFF: Adds 12+ seconds latency
+\end{verbatim}
+\end{archbox}
+
+\textbf{Verdict:} Safe but slower.
+
+\textbf{Solution 3: Deterministic Leader Election}
+
+\begin{archbox}
+\begin{verbatim}
+RELAYER CONSENSUS PROTOCOL:
+
+1. Deposit event detected by all relayers
+
+2. Relayers run leader election:
+   - Hash(depositHash + relayerPubkey + blockHash)
+   - Lowest hash = leader
+
+3. Leader has 10 seconds to process
+
+4. If leader fails, next-lowest takes over
+
+5. Other relayers WATCH, don't act
+\end{verbatim}
+\end{archbox}
+
+\begin{lstlisting}
+// Deterministic leader election
+function electLeader(depositHash, blockHash, relayers) {
+  const scores = relayers.map(r => ({
+    relayer: r,
+    score: keccak256(depositHash + r.pubkey + blockHash)
+  }));
+  
+  scores.sort((a, b) => a.score.localeCompare(b.score));
+  return scores[0].relayer; // Deterministic winner
+}
+
+// All relayers compute the same leader
+const leader = electLeader(deposit.hash, block.hash, relayers);
+
+if (leader.pubkey === myPubkey) {
+  await processDeposit(deposit); // I'm the leader
+} else {
+  await watchForCompletion(deposit, leader); // Just watch
+}
+\end{lstlisting}
+
+\textbf{Verdict:} Best balance of decentralization and safety.
+
+\textbf{Solution 4: On-Chain Nonce (Recommended)}
+
+\begin{lstlisting}[language=Solidity]
+contract GhostPool {
+    mapping(bytes32 => bool) public processedDeposits;
+    
+    function processDeposit(
+        bytes32 depositHash,
+        bytes calldata proof
+    ) external onlyRelayer {
+        // THE KEY LINE
+        require(!processedDeposits[depositHash], 
+                "Already processed");
+        processedDeposits[depositHash] = true;
+        
+        require(verifyProof(proof), "Invalid proof");
+        emit DepositProcessed(depositHash, recipient, solAmount);
+    }
+}
+\end{lstlisting}
+
+\begin{archbox}
+\begin{verbatim}
+HOW IT WORKS:
+
+Relayer A sends processDeposit TX ────> ✓ Succeeds (first)
+Relayer B sends processDeposit TX ────> ✗ Reverts (nonce set)
+Relayer C sends processDeposit TX ────> ✗ Reverts (nonce set)
+
+Relayer A sends SOL ────> ✓ Valid
+Relayer B sees A succeeded ────> STOP Aborts SOL send
+Relayer C sees A succeeded ────> STOP Aborts SOL send
+
+The race condition is moved ON-CHAIN where Ethereum's 
+consensus resolves it. Whoever's TX gets included first wins.
+\end{verbatim}
+\end{archbox}
+
+\textbf{Verdict:} Simple, battle-tested pattern used by MEV bots and liquidation systems.
+
+\subsubsection{Double-Spend Solution Summary}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Approach} & \textbf{Safe?} & \textbf{Latency} & \textbf{Decentralized?} \\
+\midrule
+Single relayer & Yes & 0 sec & No \\
+On-chain claim first & Yes & +12-15 sec & Yes \\
+Leader election & Yes & +1-2 sec & Yes \\
+On-chain nonce & Yes & 0 sec* & Yes \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+*Nonce requires claim TX before SOL send, but adds no user-perceived latency.
+
+\subsection{Defense in Depth}
+
+\begin{archbox}
+\begin{verbatim}
++──────────────────────────────────────────────────────────────────+
+|                    SECURITY LAYERS                               |
++──────────────────────────────────────────────────────────────────+
+|                                                                  |
+|  Layer 1: WAIT FOR FINALITY                                      |
+|  +── 12+ confirmations on Ethereum                               |
+|  +── Eliminates reorg risk                                       |
+|                                                                  |
+|  Layer 2: ON-CHAIN NONCES                                        |
+|  +── Each deposit gets unique ID                                 |
+|  +── Prevents double-processing                                  |
+|                                                                  |
+|  Layer 3: LOCAL PROOF VERIFICATION                               |
+|  +── Recipients/watchers verify before trusting                  |
+|  +── Catches fake proofs                                         |
+|                                                                  |
+|  Layer 4: ESCAPE HATCH                                           |
+|  +── User can force-submit after timeout                         |
+|  +── Handles relayer failure                                     |
+|                                                                  |
+|  Layer 5: SLASHABLE COLLATERAL                                   |
+|  +── Relayer stakes funds                                        |
+|  +── Economic guarantee of honesty                               |
+|                                                                  |
++──────────────────────────────────────────────────────────────────+
+\end{verbatim}
+\end{archbox}
+
+\subsection{Complete Risk Matrix}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{llllll}
+\toprule
+\textbf{Risk} & \textbf{Prob.} & \textbf{Impact} & \textbf{Who Loses} & \textbf{Mitigation} \\
+\midrule
+Relayer offline & Low & Medium & Relayer & Escape hatch, collateral \\
+Ethereum reorg & Low & High & Relayer & Wait for finality \\
+Fake proof & Low* & Critical & Everyone & Local verification \\
+Double spend & Medium & Critical & System & On-chain nonces \\
+Solana failure & Low & Medium & User & Retry logic \\
+DA layer down & Very Low & Low & History & Multi-DA redundancy \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+*Low if relayer is honest; higher if adversarial.
+
+\subsection{Recommended Production Configuration}
+
+\begin{successbox}[Safe Instant Model]
+\begin{enumerate}
+\item Wait for 2-3 Ethereum confirmations (~30-45 sec)
+   \begin{itemize}[noitemsep]
+   \item Reduces reorg risk to near-zero
+   \end{itemize}
+
+\item Generate ZK proof
+   \begin{itemize}[noitemsep]
+   \item Cryptographic validity established
+   \end{itemize}
+
+\item Publish proof hash publicly (IPFS/API)
+   \begin{itemize}[noitemsep]
+   \item Anyone can verify before trusting
+   \end{itemize}
+
+\item Send SOL to recipient
+   \begin{itemize}[noitemsep]
+   \item Recipient can verify proof first if paranoid
+   \end{itemize}
+
+\item Batch proofs to chain within 5 minutes
+   \begin{itemize}[noitemsep]
+   \item Short window = minimal risk exposure
+   \end{itemize}
+\end{enumerate}
+
+\textbf{Result:} ``Near-instant'' (45 sec) with minimal risk.
+\end{successbox}
+
+\begin{infobox}[Phased Decentralization]
+\textbf{MVP:} Single trusted relayer with on-chain nonce safety net. Fast, simple.
+
+\textbf{Production:} Primary relayer cluster with backup set using leader election.
+
+\textbf{Mature:} Open relayer network with consensus protocol, slashing, and reputation.
+\end{infobox}
+
 \section{Business Model: Three Strategic Paths}
 
 Ghost Protocol can operate with three distinct liquidity strategies. Each can work standalone or in combination.
@@ -1452,19 +2095,41 @@ node scripts/deploy-pools.mjs --seed
 
 \section{Summary}
 
-\begin{successbox}[Ghost Protocol: Multi-Source Liquidity]
+\begin{successbox}[Ghost Protocol: Architecture Summary]
+\textbf{Core Design Decisions:}
+\begin{itemize}[noitemsep]
+\item \textbf{Validium Model:} Off-chain data, on-chain state roots (99\% cost reduction)
+\item \textbf{Recursive Batching:} 10-50 proofs aggregated (90-98\% gas savings)
+\item \textbf{Soft Finality:} Proof exists before funds move (NOT optimistic)
+\end{itemize}
+
+\textbf{Liquidity Sources:}
 \begin{itemize}[noitemsep]
 \item \textbf{Ghost Pools:} Fast, trustless, for small trades
-\item \textbf{DEX Routing:} Deep liquidity, best prices
-\item \textbf{Circle (optional):} Regulated path, stablecoins
-\item \textbf{User Choice:} Pick your trust model
-\item \textbf{ZK Verified:} All paths cryptographically proven
+\item \textbf{DEX Routing:} Deep liquidity, best prices for large trades
+\item \textbf{Circle (optional):} Regulated path, institutional stablecoins
+\end{itemize}
+
+\textbf{Security Model:}
+\begin{itemize}[noitemsep]
+\item \textbf{On-chain nonces:} Prevent double-spend attacks
+\item \textbf{Confirmation waiting:} Eliminate reorg risk
+\item \textbf{Escape hatch:} Users can force-submit if relayer fails
+\item \textbf{Slashable collateral:} Economic guarantees
+\end{itemize}
+
+\textbf{Honest Claims:}
+\begin{itemize}[noitemsep]
+\item ``Instant ZK'' = Proof exists before funds move, batched later
+\item User-perceived: 30-45 seconds
+\item Cryptographic finality: 2-5 minutes
+\item This is NOT optimistic (proof is generated, not assumed)
 \end{itemize}
 \end{successbox}
 
 \vfill
 \begin{center}
-\textit{Version 2.2 --- December 5, 2025}
+\textit{Version 3.0 --- December 2025}
 \end{center}
 
 \section{Technical Critique \& FAQ}
@@ -1744,6 +2409,62 @@ Succinct & Light client & Minutes & Trustless & None & High \\
 
 Ghost Protocol is not reinventing bridging. It is \textbf{optimizing bridging} by matching proof systems to chain constraints and routing to trust models.
 \end{successbox}
+
+\section{Appendix: Quick Reference}
+
+\subsection{Terminology}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Term} & \textbf{Definition} \\
+\midrule
+Soft Finality & User receives funds before proof is on-chain \\
+Hard Finality & Proof is verified and recorded on-chain \\
+Validium & Off-chain data, on-chain state roots \\
+Recursive Batching & Combining multiple proofs into one \\
+Ghost ID & Cryptographic binding of SNARK + STARK proofs \\
+Escape Hatch & User ability to force-submit if relayer fails \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Key Metrics}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+User-perceived settlement & 30-45 seconds \\
+Cryptographic finality & 2-5 minutes \\
+SNARK proof size & 192 bytes \\
+STARK proof size & ~50 KB \\
+Verification gas (SNARK) & ~200,000 \\
+Batching savings & 90-98\% \\
+Fee structure & 0.3\% (0.1\% protocol, 0.2\% LP) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Architecture Decision Record}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Decision} & \textbf{Choice} & \textbf{Alternative} & \textbf{Rationale} \\
+\midrule
+Data storage & Validium & Rollup & 99\% cost reduction \\
+Proof system & SNARK+STARK & SNARK only & Chain-optimized \\
+Settlement & Soft finality & Wait for proof & Better UX \\
+Batching & Recursive & Per-tx & Gas efficiency \\
+Double-spend & On-chain nonce & Single relayer & Decentralized \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \end{document}
 
