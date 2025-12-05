@@ -1,0 +1,16 @@
+[package]
+name = "ghost_wallet_solana"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "ghost_wallet_solana"
+
+[dependencies]
+borsh = "0.10"
+solana-program = "1.18"
+
+[features]
+no-entrypoint = []
+

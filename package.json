@@ -1,0 +1,35 @@
+{
+  "name": "ghost-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ghost Wallet MVP focusing on atomic burn-and-mint with ZK hooks",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "coverage": "hardhat coverage",
+    "lint": "eslint \"{contracts,scripts,test}/**/*.ts\"",
+    "relayer": "ts-node scripts/relay-demo.ts",
+    "relayer:sol": "ts-node scripts/relay-solana.ts"
+  },
+  "dependencies": {
+    "@jup-ag/api": "^6.0.47",
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.95.2",
+    "bn.js": "^5.2.1",
+    "borsh": "^1.0.0",
+    "bs58": "^5.0.0",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@openzeppelin/contracts": "^5.0.2",
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.30",
+    "chai": "^4.4.1",
+    "ethers": "^6.7.0",
+    "hardhat": "^2.22.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.2"
+  }
+}

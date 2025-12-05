@@ -1,0 +1,38 @@
+{
+  "network": "mainnet",
+  "displayName": "Mainnet (Ethereum + Solana)",
+  
+  "evm": {
+    "name": "Ethereum",
+    "chainId": 1,
+    "rpcEnvVar": "EVM_RPC",
+    "explorer": "https://etherscan.io",
+    "contracts": {
+      "ghostWallet": "",
+      "bridge": "",
+      "verifier": "",
+      "zkSystem": "",
+      "weth": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+    },
+    "deploymentNote": "Contracts need to be deployed"
+  },
+  
+  "solana": {
+    "name": "Mainnet",
+    "chainId": 1399811149,
+    "rpcEnvVar": "SOL_RPC",
+    "explorer": "https://explorer.solana.com",
+    "program": {
+      "id": "",
+      "configAccount": ""
+    },
+    "deploymentNote": "Program needs to be deployed"
+  },
+  
+  "features": {
+    "jupiterSwap": true,
+    "wethSplMint": "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",
+    "jupiterNote": "Full liquidity available - auto-swap enabled"
+  }
+}
+

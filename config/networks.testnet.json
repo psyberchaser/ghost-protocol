@@ -1,0 +1,35 @@
+{
+  "network": "testnet",
+  "displayName": "Testnet (Sepolia + Devnet)",
+  
+  "evm": {
+    "name": "Sepolia",
+    "chainId": 11155111,
+    "rpcEnvVar": "EVM_RPC",
+    "explorer": "https://sepolia.etherscan.io",
+    "contracts": {
+      "ghostWallet": "0x070e199940D103b95D0EDA03E248b2653E88b231",
+      "bridge": "0x0D8d2b19fd342e637Eac41B8302aeD60f11e7bC8",
+      "verifier": "0xa47deb4E56BAf5479E33a6AaD0F58F0F961B4e29",
+      "zkSystem": "0x30336f7Eb94ECD28E480a21a3Cc5E905015962cF",
+      "weth": "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9"
+    }
+  },
+  
+  "solana": {
+    "name": "Devnet",
+    "chainId": 1399811149,
+    "rpcEnvVar": "SOL_RPC",
+    "explorer": "https://explorer.solana.com/?cluster=devnet",
+    "program": {
+      "id": "9gjTj718N5cbUkUXV6vYmovEeh6hcDm9HAGeXFMJmcjY",
+      "configAccount": "FtSUvdm9bfPvHirkaXGZn7ggH91SjMvWy3u5N14bsngE"
+    }
+  },
+  
+  "features": {
+    "jupiterSwap": false,
+    "jupiterNote": "No liquidity on devnet - swap disabled"
+  }
+}
+

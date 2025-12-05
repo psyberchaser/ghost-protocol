@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+dashboard/node_modules/
+
+# Environment files (contain secrets!)
+.env
+.env.local
+.env.*.local
+*.env
+
+# Build artifacts
+artifacts/
+cache/
+typechain-types/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Solana
+target/
+test-ledger/
+
+# LaTeX build files
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+
+# Keep example env files
+!.env.example
+!config/*.env.example
+
+node_modules/
+.env.complete
