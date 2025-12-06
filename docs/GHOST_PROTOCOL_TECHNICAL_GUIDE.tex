@@ -261,7 +261,7 @@ The proof \textbf{exists}. That's the key difference.
 \end{itemize}
 \end{successbox}
 
-\subsection{What You Can Honestly Claim}
+\subsection{What We Can Honestly Claim}
 
 \begin{table}[h]
 \centering
@@ -347,17 +347,17 @@ Our own liquidity pools on each chain.
 \centering
 \begin{tabular}{ll}
 \toprule
-\textbf{Pros} & \textbf{Cons} \\
+\textbf{Pros} & \textbf{Considerations} \\
 \midrule
-Full control & Must bootstrap liquidity \\
-Fastest execution & Capital intensive \\
-Lowest smart contract risk & Limited depth initially \\
-Revenue stays in protocol & \\
+Full control & Requires liquidity management \\
+Fastest execution & Capital deployment strategy \\
+Lowest smart contract risk & Pool rebalancing needed \\
+Revenue stays in protocol & Multi-chain coordination \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textbf{Best for:} Small/medium trades under \$10K, speed-critical transfers.
+\textbf{Best for:} Any trade size (with sufficient pool depth), speed-critical transfers, maximum control.
 
 \subsection{Option 2: DEX Liquidity (Uniswap, Jupiter)}
 
@@ -402,7 +402,7 @@ Competitive market = tight spreads & Slippage on huge trades \\
 \subsubsection{What Do We Lose With DEX Routing?}
 
 \begin{dangerbox}[Honest Trade-offs]
-DEX routing is powerful but comes with real costs. Here's what you give up:
+DEX routing is powerful but comes with real costs. Here are the trade-offs:
 \end{dangerbox}
 
 \begin{table}[h]
@@ -1842,16 +1842,17 @@ Break-even Analysis:
 \toprule
 \textbf{Advantages} & \textbf{Challenges} \\
 \midrule
-Full control over liquidity & Must bootstrap initial TVL \\
-All fees stay in ecosystem & Capital inefficiency risk \\
-Truly decentralized & Limited by pool depth \\
+Full control over liquidity & Requires active management \\
+All fees stay in ecosystem & Multi-chain coordination \\
+Truly decentralized & Pool rebalancing needed \\
+Scales to any trade size & \\
 Best UX (fastest) & Requires active LP management \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{successbox}[Best For]
-Projects wanting full decentralization, retail-focused payments under \$50K, maximum speed priority.
+Any trade size with sufficient pool depth, maximum speed and control, keeping all revenue in-protocol.
 \end{successbox}
 
 \subsection{Path 2: DEX Aggregation (Leverage Existing Liquidity)}
@@ -2099,11 +2100,18 @@ Key Advantage: Resilience
 \item No additional capital needed
 \end{itemize}
 
-\textbf{Phase 3 (Enterprise):} Circle partnership
+\textbf{Phase 3 (Scale):} Deep liquidity pools + smart routing
 \begin{itemize}[noitemsep]
-\item Institutional onboarding
-\item Regulatory compliance
-\item Stablecoin optimization
+\item Scale native pools to handle any trade size
+\item Smart routing to DEX when optimal
+\item Multi-chain pool coordination
+\end{itemize}
+
+\textbf{Phase 4 (Optional):} Circle partnership
+\begin{itemize}[noitemsep]
+\item For institutional clients requiring regulated path
+\item Stablecoin optimization for USDC flows
+\item Not required---fully optional addition
 \end{itemize}
 
 \textbf{Phase 4 (Mature):} Full hybrid with smart routing
@@ -2275,12 +2283,13 @@ node scripts/deploy-pools.mjs --seed
 
 \begin{enumerate}[noitemsep]
 \item Mainnet launch (ETH + SOL)
-\item DEX integration (Uniswap, Jupiter)
-\item Circle partnership application
-\item Multi-asset support (USDC, USDT)
+\item Scale native pools (target: \$10M+ TVL per chain)
+\item DEX integration (Uniswap, Jupiter) for smart routing
 \item Bidirectional flows (SOL to ETH)
+\item Multi-asset support (USDC, USDT, wBTC)
 \item Bitcoin integration
-\item \$10M+ insurance fund
+\item zkVM migration (Risc0/SP1) for unified architecture
+\item Circle partnership (optional, for institutional clients)
 \end{enumerate}
 
 \section{Summary}
@@ -2555,8 +2564,11 @@ Succinct & Light client & Minutes & Trustless & None & High \\
 
 \begin{successbox}[Where Ghost Protocol Wins]
 \begin{enumerate}
-\item \textbf{High-value institutional transfers} \\
-   $>$\$10K transactions where \$15 gas is acceptable for trustless settlement
+\item \textbf{Any-size instant transfers} \\
+   With deep liquidity pools + recursive batching, we handle \$50 to \$50M transfers profitably
+
+\item \textbf{Speed-critical payments} \\
+   30-45 second soft finality beats all competitors on user experience
 
 \item \textbf{L2-to-Solana corridor} \\
    Arbitrum/Base/Optimism to Solana with cheap per-tx proofs
@@ -2571,8 +2583,8 @@ Succinct & Light client & Minutes & Trustless & None & High \\
 
 \begin{warningbox}[Where Ghost Protocol Struggles]
 \begin{enumerate}
-\item \textbf{Retail mainnet transactions} \\
-   \$50 transfers lose money on gas without batching
+\item \textbf{Very small retail transactions} \\
+   Sub-\$10 transfers may have thin margins even with batching (but still work)
 
 \item \textbf{Speed-critical arbitrage} \\
    MEV bots need sub-second, not 30 seconds
@@ -2901,7 +2913,7 @@ Using a zkVM does NOT affect Ghost Protocol's patent position:
 \item Double-spend prevention system
 \end{itemize}
 
-Your innovation is at the \textbf{protocol layer}, not the cryptographic layer. The implementation (zkVM vs custom) doesn't change what's patentable.
+Ghost Protocol's innovation is at the \textbf{protocol layer}, not the cryptographic layer. The implementation (zkVM vs custom) doesn't change what's patentable.
 \end{infobox}
 
 \subsection{Why STARK Inside SNARK (Not Reverse)}
@@ -3046,9 +3058,9 @@ The wrapping approach changes HOW you prove, not WHEN. The proof still exists be
 
 \textbf{Phase 1 $\rightarrow$ 2:} Upgrade when Solana proving speed matters (easy change).
 
-\textbf{Phase 2 $\rightarrow$ 3:} Upgrade when you want unified codebase (bigger change, use zkVM).
+\textbf{Phase 2 $\rightarrow$ 3:} Upgrade when we want unified codebase (bigger change, use zkVM).
 
-You can ship with Phase 1 and upgrade incrementally. Soft finality works throughout.
+We can ship with Phase 1 and upgrade incrementally. Soft finality works throughout.
 \end{successbox}
 
 \end{document}
