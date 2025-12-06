@@ -1076,7 +1076,7 @@ COMPLETE ZK VERIFICATION FLOW:
 \item \textbf{Wormhole/LayerZero:} Multi-sig validators, not ZK
 \item \textbf{Succinct/Polymer:} ZK light clients, but high latency
 \item \textbf{Across Protocol:} Optimistic with challenge period
-\item \textbf{Other ZK bridges:} Traditional STARKs (slow proving)
+\item \textbf{Other ZK bridges:} Traditional STARKs (10-30 sec proving vs our 1-3 sec)
 \end{itemize}
 \end{dangerbox}
 
@@ -2945,29 +2945,7 @@ STARK is the inner proof (fast to generate). SNARK is the outer wrapper (cheap t
 
 \subsection{Complete Migration Path}
 
-\subsubsection{Phase 1: Current System (Working)}
-
-\begin{archbox}
-\begin{verbatim}
-+------------------+                    +------------------+
-|    ETHEREUM      |                    |     SOLANA       |
-+------------------+                    +------------------+
-|  SNARK (Groth16) |                    |  STARK (trad.)   |
-|  5-10 sec prove  |                    |  10-30 sec prove |
-|  200K gas verify |                    |  500K CU verify  |
-+------------------+                    +------------------+
-         |                                      |
-         +----------------+---------------------+
-                          |
-                     ghost_id binding
-                     (links both proofs)
-
-STATUS: Working on testnet
-SOFT FINALITY: Yes - proof exists before funds move
-\end{verbatim}
-\end{archbox}
-
-\subsubsection{Phase 2: Upgrade STARK to M31}
+\subsubsection{Phase 1: Current System (M31 Circle STARKs)}
 
 \begin{archbox}
 \begin{verbatim}
@@ -2975,22 +2953,32 @@ SOFT FINALITY: Yes - proof exists before funds move
 |    ETHEREUM      |                    |     SOLANA       |
 +------------------+                    +------------------+
 |  SNARK (Groth16) |                    |  STARK (M31)     |
-|  5-10 sec prove  |                    |  1-3 sec prove   | <- 10x faster!
-|  200K gas verify |                    |  50-100K CU      | <- 5x cheaper!
+|  5-10 sec prove  |                    |  1-3 sec prove   |
+|  200K gas verify |                    |  50-100K CU      |
 +------------------+                    +------------------+
          |                                      |
          +----------------+---------------------+
                           |
                      ghost_id binding
-                     (unchanged)
+                     (links both proofs)
 
-CHANGE: Only Solana side upgraded
-EVM SIDE: Unchanged (still Groth16 SNARK)
-SOFT FINALITY: Still works - same model
+STATUS: Current architecture
+M31 FIELD: Using Mersenne-31 for 7-10x faster STARK proving
+SOFT FINALITY: Yes - proof exists before funds move
 \end{verbatim}
 \end{archbox}
 
-\subsubsection{Phase 3: Unified Architecture with Wrapper}
+\begin{successbox}[Why M31 Circle STARKs Now]
+We use Circle STARKs with the Mersenne-31 field from day one because:
+\begin{itemize}[noitemsep]
+\item 7-10x faster proving (1-3 sec vs 10-30 sec)
+\item 5x cheaper Solana verification
+\item Native 32-bit CPU operations
+\item No additional complexity vs traditional STARKs
+\end{itemize}
+\end{successbox}
+
+\subsubsection{Phase 2: Unified Architecture with Wrapper (Future)}
 
 \begin{archbox}
 \begin{verbatim}
@@ -3044,23 +3032,25 @@ The wrapping approach changes HOW you prove, not WHEN. The proof still exists be
 \centering
 \begin{tabular}{llll}
 \toprule
-\textbf{Phase} & \textbf{Change} & \textbf{Timeline} & \textbf{Soft Finality} \\
+\textbf{Phase} & \textbf{Architecture} & \textbf{Status} & \textbf{Soft Finality} \\
 \midrule
-1 (Current) & SNARK + STARK (separate) & Now & Works \\
-2 (M31) & Upgrade STARK to M31 & When ready & Works \\
-3 (Unified) & STARK + wrapper via zkVM & Later & Works \\
+1 (Current) & SNARK (Groth16) + M31 STARK & \textcolor{ghostgreen}{Live} & Works \\
+2 (Future) & Unified M31 STARK + wrapper & Planned & Works \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\begin{successbox}[Recommendation]
-\textbf{Current system works.} Each phase is an optimization, not a requirement.
+\begin{successbox}[Current State]
+\textbf{We ship with M31 Circle STARKs from day one.} This gives us:
+\begin{itemize}[noitemsep]
+\item 7-10x faster Solana proving (1-3 sec vs 10-30 sec)
+\item 5x cheaper Solana verification
+\item No additional implementation complexity
+\end{itemize}
 
-\textbf{Phase 1 $\rightarrow$ 2:} Upgrade when Solana proving speed matters (easy change).
+\textbf{Phase 1 $\rightarrow$ 2:} Upgrade to unified architecture with SNARK wrapper when we want single codebase. Uses zkVM (Risc0/SP1) for automation.
 
-\textbf{Phase 2 $\rightarrow$ 3:} Upgrade when we want unified codebase (bigger change, use zkVM).
-
-We can ship with Phase 1 and upgrade incrementally. Soft finality works throughout.
+Soft finality works throughout. The architecture change is an optimization, not a requirement.
 \end{successbox}
 
 \end{document}
