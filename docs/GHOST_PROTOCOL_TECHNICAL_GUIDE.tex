@@ -2904,33 +2904,151 @@ Using a zkVM does NOT affect Ghost Protocol's patent position:
 Your innovation is at the \textbf{protocol layer}, not the cryptographic layer. The implementation (zkVM vs custom) doesn't change what's patentable.
 \end{infobox}
 
+\subsection{Why STARK Inside SNARK (Not Reverse)}
+
+The wrapping direction matters:
+
+\begin{archbox}
+\begin{verbatim}
+STARK INSIDE SNARK (Correct):
++-- STARK is FAST to generate (1-3 sec with M31)
++-- STARK is EXPENSIVE to verify on EVM (2M gas)
++-- SNARK is SLOWER to generate (2-4 sec for wrapper)
++-- SNARK is CHEAP to verify on EVM (200K gas)
+|
++-- Solution: Generate fast STARK, wrap in SNARK for cheap verify
+
+SNARK INSIDE STARK (Wrong):
++-- Would need to generate slow SNARK first
++-- Then wrap in STARK
++-- Then verify STARK on EVM (2M gas - expensive!)
+|
++-- Defeats the purpose: slow + expensive
+\end{verbatim}
+\end{archbox}
+
+\begin{dangerbox}[Remember]
+STARK is the inner proof (fast to generate). SNARK is the outer wrapper (cheap to verify on EVM).
+\end{dangerbox}
+
+\subsection{Complete Migration Path}
+
+\subsubsection{Phase 1: Current System (Working)}
+
+\begin{archbox}
+\begin{verbatim}
++------------------+                    +------------------+
+|    ETHEREUM      |                    |     SOLANA       |
++------------------+                    +------------------+
+|  SNARK (Groth16) |                    |  STARK (trad.)   |
+|  5-10 sec prove  |                    |  10-30 sec prove |
+|  200K gas verify |                    |  500K CU verify  |
++------------------+                    +------------------+
+         |                                      |
+         +----------------+---------------------+
+                          |
+                     ghost_id binding
+                     (links both proofs)
+
+STATUS: Working on testnet
+SOFT FINALITY: Yes - proof exists before funds move
+\end{verbatim}
+\end{archbox}
+
+\subsubsection{Phase 2: Upgrade STARK to M31}
+
+\begin{archbox}
+\begin{verbatim}
++------------------+                    +------------------+
+|    ETHEREUM      |                    |     SOLANA       |
++------------------+                    +------------------+
+|  SNARK (Groth16) |                    |  STARK (M31)     |
+|  5-10 sec prove  |                    |  1-3 sec prove   | <- 10x faster!
+|  200K gas verify |                    |  50-100K CU      | <- 5x cheaper!
++------------------+                    +------------------+
+         |                                      |
+         +----------------+---------------------+
+                          |
+                     ghost_id binding
+                     (unchanged)
+
+CHANGE: Only Solana side upgraded
+EVM SIDE: Unchanged (still Groth16 SNARK)
+SOFT FINALITY: Still works - same model
+\end{verbatim}
+\end{archbox}
+
+\subsubsection{Phase 3: Unified Architecture with Wrapper}
+
+\begin{archbox}
+\begin{verbatim}
+              +--------------------------------+
+              |     ONE STARK (M31) CIRCUIT    |
+              |     All logic in one place     |
+              |     Proving time: 1-3 sec      |
+              +---------------+----------------+
+                              |
+              +---------------+---------------+
+              |                               |
+              v                               v
+    +------------------+            +------------------+
+    |   SNARK Wrapper  |            |   STARK Direct   |
+    |   (for EVM)      |            |   (for Solana)   |
+    |   +2-4 sec       |            |   +0 sec         |
+    +--------+---------+            +--------+---------+
+             |                               |
+             v                               v
+    +------------------+            +------------------+
+    |    ETHEREUM      |            |     SOLANA       |
+    |    200K gas      |            |     50K CU       |
+    +------------------+            +------------------+
+
+CHANGE: One unified proof circuit
+WRAPPER: STARK wrapped in SNARK for EVM only
+SOLANA: Uses STARK directly (no wrapper needed)
+SOFT FINALITY: Still works - proof exists before funds move
+\end{verbatim}
+\end{archbox}
+
+\subsection{Soft Finality Through All Phases}
+
+\begin{successbox}[Key Guarantee]
+Soft finality works identically in ALL phases:
+
+\begin{enumerate}[noitemsep]
+\item T+0s: User deposits ETH
+\item T+1-5s: Proof generated (SNARK, STARK, or wrapped---doesn't matter)
+\item T+2-6s: \textbf{Proof EXISTS} --- cryptographically valid
+\item T+3-7s: SOL sent to recipient $\leftarrow$ \textbf{User is done}
+\item T+40s: Proof batched and submitted on-chain $\leftarrow$ Hard finality
+\end{enumerate}
+
+The wrapping approach changes HOW you prove, not WHEN. The proof still exists before funds move.
+\end{successbox}
+
 \subsection{Migration Timeline}
 
 \begin{table}[h]
 \centering
-\begin{tabular}{lll}
+\begin{tabular}{llll}
 \toprule
-\textbf{Phase} & \textbf{Approach} & \textbf{Timeline} \\
+\textbf{Phase} & \textbf{Change} & \textbf{Timeline} & \textbf{Soft Finality} \\
 \midrule
-Current & Groth16 SNARK (working) & Now \\
-Near-term & Evaluate Risc0/SP1 & 1-2 months \\
-Migration & Implement zkVM proofs & 2-3 weeks \\
-Production & Full recursive (STARK + wrapper) & Post-migration \\
+1 (Current) & SNARK + STARK (separate) & Now & Works \\
+2 (M31) & Upgrade STARK to M31 & When ready & Works \\
+3 (Unified) & STARK + wrapper via zkVM & Later & Works \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{successbox}[Recommendation]
-\textbf{Current system works.} The zkVM migration is an optimization, not a requirement.
+\textbf{Current system works.} Each phase is an optimization, not a requirement.
 
-Migrate when:
-\begin{itemize}[noitemsep]
-\item Proving speed becomes a bottleneck
-\item You need faster iteration on proof logic
-\item You want unified architecture (same Rust for all chains)
-\end{itemize}
+\textbf{Phase 1 $\rightarrow$ 2:} Upgrade when Solana proving speed matters (easy change).
 
-The current Groth16 SNARK system is production-ready. zkVM is the next evolution.
+\textbf{Phase 2 $\rightarrow$ 3:} Upgrade when you want unified codebase (bigger change, use zkVM).
+
+You can ship with Phase 1 and upgrade incrementally. Soft finality works throughout.
 \end{successbox}
 
 \end{document}
