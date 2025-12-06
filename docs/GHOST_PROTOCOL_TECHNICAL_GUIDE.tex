@@ -96,7 +96,7 @@ Ghost Protocol is a \textbf{trustless, chain-agnostic cross-chain payment system
 \item ZK proof verification (SNARK + STARK hybrid)
 \item Multiple liquidity sources (pools, DEXs, stablecoins)
 \item Real-time oracle pricing (Pyth Network)
-\item Non-custodial (you control your keys)
+\item Non-custodial (users control their keys)
 \item Recursive proof batching for gas efficiency
 \item Soft finality with cryptographic guarantees
 \end{itemize}
@@ -302,7 +302,7 @@ Coinbase holds licenses (MTL, BitLicense, etc.) but does NOT mint money. They ma
 \toprule
 \textbf{Aspect} & \textbf{Coinbase} & \textbf{Ghost} \\
 \midrule
-Custody & They hold funds & You hold funds \\
+Custody & They hold funds & Users hold funds \\
 Swaps & Database update & On-chain tx \\
 Trust & Trust company & Trust math \\
 Freeze funds? & \textcolor{red}{Yes} & \textcolor{ghostgreen}{No} \\
@@ -2878,8 +2878,8 @@ pub fn main() {
 \begin{warningbox}[Dependency Trade-offs]
 Using Risc0 or SP1 creates some vendor dependency:
 \begin{itemize}[noitemsep]
-\item Your proof format ties to their system
-\item You rely on their continued maintenance
+\item Our proof format ties to their system
+\item We rely on their continued maintenance
 \end{itemize}
 
 \textbf{Mitigations:}
@@ -2887,7 +2887,7 @@ Using Risc0 or SP1 creates some vendor dependency:
 \item Both are open source (Apache 2.0 / MIT)
 \item Can self-host provers (no cloud dependency)
 \item Can fork code if vendor disappears
-\item Your Rust logic is portable between zkVMs
+\item Our Rust logic is portable between zkVMs
 \item Both are well-funded (\$40-55M+)
 \end{itemize}
 \end{warningbox}
